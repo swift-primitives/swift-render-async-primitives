@@ -1,0 +1,9 @@
+# .github/metadata.yaml
+description: "Async streaming infrastructure for Render — Render.Async.Sink, Buffered, Chunked over swift-async-primitives' Channel + swift-byte-primitives' Byte."
+topics:
+  - primitives
+  - render
+  - async
+homepage: "https://swift-institute.org"
+readme:
+  family: E
