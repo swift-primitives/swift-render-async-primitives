@@ -22,9 +22,9 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "../swift-render-primitives"),
-        .package(path: "../swift-async-primitives"),
-        .package(path: "../swift-byte-primitives"),
+        .package(url: "https://github.com/swift-primitives/swift-render-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-async-primitives.git", branch: "main"),
+        .package(url: "https://github.com/swift-primitives/swift-byte-primitives.git", branch: "main"),
     ],
     targets: [
         .target(
