@@ -30,7 +30,7 @@ let package = Package(
         .target(
             name: "Render Async Primitives",
             dependencies: [
-                .product(name: "Render Primitives Core", package: "swift-render-primitives"),
+                .product(name: "Render Primitives", package: "swift-render-primitives"),
                 .product(name: "Async Channel Primitives", package: "swift-async-primitives"),
                 .product(name: "Byte Primitives", package: "swift-byte-primitives"),
             ]
