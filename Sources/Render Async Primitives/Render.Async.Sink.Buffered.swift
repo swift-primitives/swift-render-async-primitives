@@ -47,58 +47,60 @@ extension Render.Async.Sink {
             self.buffer.reserveCapacity(chunkSize)
             self.chunkSize = chunkSize
         }
+    }
+}
 
-        /// Write bytes to the sink, sending full chunks with backpressure.
-        ///
-        /// When the buffer fills to `chunkSize`, a chunk is sent to the channel.
-        /// The `send()` call suspends until the consumer reads the chunk,
-        /// providing backpressure.
-        ///
-        /// - Parameter bytes: The bytes to write.
-        public func write(_ bytes: some Swift.Sequence<Byte> & Sendable) async {
-            buffer.append(contentsOf: bytes)
+extension Render.Async.Sink.Buffered {
+    /// Write bytes to the sink, sending full chunks with backpressure.
+    ///
+    /// When the buffer fills to `chunkSize`, a chunk is sent to the channel.
+    /// The `send()` call suspends until the consumer reads the chunk,
+    /// providing backpressure.
+    ///
+    /// - Parameter bytes: The bytes to write.
+    public func write(_ bytes: some Swift.Sequence<Byte> & Sendable) async {
+        buffer.append(contentsOf: bytes)
+        await flushFullChunks()
+    }
+
+    /// Write a single byte to the sink.
+    ///
+    /// - Parameter byte: The byte to write.
+    public func write(_ byte: Byte) async {
+        buffer.append(byte)
+        if buffer.count >= chunkSize {
             await flushFullChunks()
         }
+    }
 
-        /// Write a single byte to the sink.
-        ///
-        /// - Parameter byte: The byte to write.
-        public func write(_ byte: Byte) async {
-            buffer.append(byte)
-            if buffer.count >= chunkSize {
-                await flushFullChunks()
-            }
+    /// Flush any full chunks to the channel.
+    ///
+    /// Uses offset-based iteration to avoid O(n²) behavior from repeated
+    /// `removeFirst()` calls. Only performs a single `removeFirst()` at the end.
+    private func flushFullChunks() async {
+        var offset = 0
+        while buffer.count - offset >= chunkSize {
+            let end = offset + chunkSize
+            // Backpressure: suspends until consumed. Silently stops on close/cancel.
+            // swiftlint:disable:next no_try_optional - reason: deliberate backpressure send that silently stops on close/cancel (see comment above); the send error carries no recoverable signal ([IMPL-108] escape hatch)
+            try? await sender.send(ArraySlice(buffer[offset..<end]))
+            offset = end
         }
+        if offset > 0 {
+            buffer.removeFirst(offset)
+        }
+    }
 
-        /// Flush any full chunks to the channel.
-        ///
-        /// Uses offset-based iteration to avoid O(n²) behavior from repeated
-        /// `removeFirst()` calls. Only performs a single `removeFirst()` at the end.
-        private func flushFullChunks() async {
-            var offset = 0
-            while buffer.count - offset >= chunkSize {
-                let end = offset + chunkSize
-                // Backpressure: suspends until consumed. Silently stops on close/cancel.
-                // swiftlint:disable:next no_try_optional - reason: deliberate backpressure send that silently stops on close/cancel (see comment above); the send error carries no recoverable signal ([IMPL-108] escape hatch)
-                try? await sender.send(ArraySlice(buffer[offset..<end]))
-                offset = end
-            }
-            if offset > 0 {
-                buffer.removeFirst(offset)
-            }
+    /// Flush remaining bytes and close the sender.
+    ///
+    /// Call this when rendering is complete to send any remaining buffered
+    /// bytes and signal to consumers that the stream is finished.
+    public func finish() async {
+        if !buffer.isEmpty {
+            // swiftlint:disable:next no_try_optional - reason: deliberate backpressure send that silently stops on close/cancel — mirrors flushFullChunks; the send error carries no recoverable signal ([IMPL-108] escape hatch)
+            try? await sender.send(ArraySlice(buffer))
+            buffer.removeAll()
         }
-
-        /// Flush remaining bytes and close the sender.
-        ///
-        /// Call this when rendering is complete to send any remaining buffered
-        /// bytes and signal to consumers that the stream is finished.
-        public func finish() async {
-            if !buffer.isEmpty {
-                // swiftlint:disable:next no_try_optional - reason: deliberate backpressure send that silently stops on close/cancel — mirrors flushFullChunks; the send error carries no recoverable signal ([IMPL-108] escape hatch)
-                try? await sender.send(ArraySlice(buffer))
-                buffer.removeAll()
-            }
-            sender.close()
-        }
+        sender.close()
     }
 }
