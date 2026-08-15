@@ -81,10 +81,11 @@ extension Render.Async.Sink.Buffered {
         var offset = 0
         while buffer.count - offset >= chunkSize {
             let end = offset + chunkSize
-            // Backpressure: suspends until consumed. Silently stops on close/cancel.
-            // swift-linter:disable:next try optional
-            // REASON: deliberate backpressure send that silently stops on close/cancel (see comment above); the send error carries no recoverable signal ([IMPL-108] escape hatch)
-            try? await sender.send(ArraySlice(buffer[offset..<end]))
+            // Backpressure: suspends until consumed. Silently stops on close/cancel;
+            // the send error carries no recoverable signal ([IMPL-108] escape hatch).
+            do throws(Async.Channel<ArraySlice<Byte>>.Error) {
+                try await sender.send(ArraySlice(buffer[offset..<end]))
+            } catch {}
             offset = end
         }
         if offset > 0 {
@@ -98,9 +99,11 @@ extension Render.Async.Sink.Buffered {
     /// bytes and signal to consumers that the stream is finished.
     public func finish() async {
         if !buffer.isEmpty {
-            // swift-linter:disable:next try optional
-            // REASON: deliberate backpressure send that silently stops on close/cancel — mirrors flushFullChunks; the send error carries no recoverable signal ([IMPL-108] escape hatch)
-            try? await sender.send(ArraySlice(buffer))
+            // Mirrors flushFullChunks: the send error carries no recoverable
+            // signal ([IMPL-108] escape hatch).
+            do throws(Async.Channel<ArraySlice<Byte>>.Error) {
+                try await sender.send(ArraySlice(buffer))
+            } catch {}
             buffer.removeAll()
         }
         sender.close()
