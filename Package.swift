@@ -1,15 +1,15 @@
-// swift-tools-version: 6.3.3
+// swift-tools-version: 6.4
 
 import PackageDescription
 
 let package = Package(
     name: "swift-render-async-primitives",
     platforms: [
-        .macOS("27"),
-        .iOS("27"),
-        .tvOS("27"),
-        .watchOS("27"),
-        .visionOS("27"),
+        .macOS(.v27),
+        .iOS(.v27),
+        .tvOS(.v27),
+        .watchOS(.v27),
+        .visionOS(.v27),
     ],
     products: [
         .library(
@@ -22,9 +22,18 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-primitives/swift-render-primitives.git", branch: "main"),
-        .package(url: "https://github.com/swift-primitives/swift-async-primitives.git", branch: "main"),
-        .package(url: "https://github.com/swift-primitives/swift-byte-primitives.git", branch: "main"),
+        .package(
+            url: "https://github.com/swift-primitives/swift-render-primitives.git",
+            branch: "main"
+        ),
+        .package(
+            url: "https://github.com/swift-primitives/swift-async-primitives.git",
+            branch: "main"
+        ),
+        .package(
+            url: "https://github.com/swift-primitives/swift-byte-primitives.git",
+            branch: "main"
+        ),
     ],
     targets: [
         .target(
@@ -39,7 +48,10 @@ let package = Package(
             name: "Render Async Primitives Test Support",
             dependencies: [
                 "Render Async Primitives",
-                .product(name: "Render Primitives Test Support", package: "swift-render-primitives"),
+                .product(
+                    name: "Render Primitives Test Support",
+                    package: "swift-render-primitives"
+                ),
             ],
             path: "Tests/Support"
         ),
